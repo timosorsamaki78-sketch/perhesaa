@@ -620,9 +620,14 @@ function renderCard(loc, data){
           </div>
         </div>
       </div>
-      <button class="btn danger" data-remove="${loc.id}" title="Poista sijainti">Poista</button>
+    <div style="display:flex; gap:6px;">
+      ${index > 0 ? `<button class="btn" data-up="${loc.id}" title="Siirrä ylös">↑</button>` : ``}
+      ${index < locations.length - 1 ? `<button class="btn" data-down="${loc.id}" title="Siirrä alas">↓</button>` : ``}
+     <button class="btn danger" data-remove="${loc.id}" title="Poista sijainti">Poista</button>
+   </div>
+   
     </div>
-
+	
     <div class="row">
       <div class="pill">
         <div class="k">Nyt</div>
@@ -689,6 +694,14 @@ function renderCard(loc, data){
     removeLocation(loc.id);
   });
 
+  card.querySelector('[data-up]')?.addEventListener("click", () => {
+    moveLocation(loc.id, "up");
+  });
+
+  card.querySelector('[data-down]')?.addEventListener("click", () => {
+    moveLocation(loc.id, "down");
+  });
+
   return card;
 }
 
@@ -706,11 +719,11 @@ async function refresh(){
   setStatusLoading("Haetaan säätietoja…");
   const started = Date.now();
 
-  for(const loc of locations){
-    try{
-      const data = await fetchForecast(loc);
-      cardsEl.appendChild(renderCard(loc, data));
-    }catch(err){
+  for(let i = 0; i < locations.length; i++){
+    const loc = locations[i];
+    const data = await fetchForecast(loc);
+    cardsEl.appendChild(renderCard(loc, data, i));
+  }catch(err){
       const card = document.createElement("div");
       card.className = "card";
       card.innerHTML = `
@@ -742,6 +755,25 @@ function removeLocation(id){
   }else{
     toast("Sijainti poistettu.");
   }
+  saveLocations(locations);
+  refresh();
+}
+
+function moveLocation(id, direction){
+  const index = locations.findIndex(l => l.id === id);
+  if(index === -1) return;
+
+  const newIndex = direction === "up"
+    ? index - 1
+    : index + 1;
+
+  if(newIndex < 0 || newIndex >= locations.length) return;
+
+  // Vaihda paikkoja
+  const temp = locations[index];
+  locations[index] = locations[newIndex];
+  locations[newIndex] = temp;
+
   saveLocations(locations);
   refresh();
 }
@@ -847,3 +879,4 @@ refresh();
 </script>
 </body>
 </html>
+
