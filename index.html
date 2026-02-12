@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Sää (Open-Meteo)</title>
+  <style>
+    /* =========================
+       THEME (CSS variables)
+       ========================= */
+    :root{
+      --bg:#f4f7ff;
+      --card:#ffffff;
+      --muted:#52607a;
+      --text:#0b1220;
+      --accent:#0aa3ff;
+      --danger:#d94242;
+      --ok:#0da86a;
+      --warn:#d28a00;
+      --shadow: 0 10px 30px rgba(12,18,32,.12);
+      --radius:18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --border: rgba(12,18,32,.10);
+      --glass: rgba(255,255,255,.72);
+      --pill: rgba(10,20,40,.04);
+      --pillBorder: rgba(12,18,32,.10);
+      --thead: rgba(10,20,40,.04);
+    }
+    html[data-theme="dark"]{
+      --bg:#0b1220;
+      --card:#111a2e;
+      --muted:#8ea0c9;
+      --text:#e8eeff;
+      --accent:#5dd6ff;
+      --danger:#ff6b6b;
+      --ok:#77f2b5;
+      --warn:#ffd36b;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --border: rgba(255,255,255,.10);
+      --glass: rgba(11,18,32,.78);
+      --pill: rgba(17,26,46,.55);
+      --pillBorder: rgba(255,255,255,.10);
+      --thead: rgba(255,255,255,.03);
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+	  font-size: 17px; 
+      background:
+        radial-gradient(1000px 600px at 20% -10%, rgba(10,163,255,.10), transparent 60%),
+        radial-gradient(900px 500px at 100% 0%, rgba(13,168,106,.08), transparent 55%),
+        var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+    header{
+      position:sticky; top:0; z-index:5;
+      background:var(--glass);
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid var(--border);
+    }
+    .wrap{max-width:980px; margin:0 auto; padding:14px 14px 22px;}
+    .top{
+      display:flex; gap:12px; align-items:center; justify-content:space-between;
+    }
+    h1{margin:0; font-size:18px; letter-spacing:.3px}
+    .sub{color:var(--muted); font-size:12px; margin-top:2px}
+
+    .btn{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.20);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:14px;
+      cursor:pointer;
+      display:inline-flex; align-items:center; gap:8px;
+      touch-action: manipulation;
+      user-select:none;
+    }
+    html[data-theme="dark"] .btn{ background:rgba(255,255,255,.04); }
+    .btn:active{transform:scale(.98)}
+    .btn.primary{border-color:rgba(10,163,255,.35); background:rgba(10,163,255,.10)}
+    .btn.danger{border-color:rgba(217,66,66,.35); background:rgba(217,66,66,.08); color:inherit}
+    html[data-theme="dark"] .btn.danger{border-color:rgba(255,107,107,.35); background:rgba(255,107,107,.08); color:#ffd6d6}
+
+    main{padding:10px 0 26px}
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+    }
+    @media (min-width: 860px){
+      .grid{grid-template-columns: 1fr 1fr;}
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.70));
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    html[data-theme="dark"] .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    }
+
+    .card .head{
+      padding:16px 16px 12px;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+    }
+    .titleRow{display:flex; align-items:center; gap:10px}
+    .title{
+      font-size:16px; font-weight:700;
+      margin:0;
+    }
+    .wicon{
+      font-size:20px; line-height:1;
+      width:28px; height:28px;
+      display:grid; place-items:center;
+      border-radius:10px;
+      background:var(--pill);
+      border:1px solid var(--pillBorder);
+    }
+    .meta{color:var(--muted); font-size:12px; margin-top:4px}
+    .row{
+      display:flex; flex-wrap:wrap; gap:10px;
+      padding:0 16px 14px;
+    }
+    .pill{
+      border:1px solid var(--pillBorder);
+      background:var(--pill);
+      padding:10px 12px;
+      border-radius:14px;
+      min-width: 120px;
+    }
+    .pill .k{color:var(--muted); font-size:11px}
+    .pill .v{font-size:18px; font-weight:800; margin-top:2px}
+    .pill .s{color:var(--muted); font-size:12px; margin-top:2px}
+    .section{
+      padding:12px 16px 16px;
+      border-top:1px solid var(--border);
+    }
+	
+	details{
+	  border:1px solid var(--border);
+	  border-radius:14px;
+	  background:rgba(255,255,255,.55);
+	  overflow:hidden;
+	}
+	html[data-theme="dark"] details{ background:rgba(17,26,46,.35); }
+
+	summary{
+	  cursor:pointer;
+	  list-style:none;
+	  padding:12px 12px;
+	  font-weight:700;
+	  display:flex;
+	  align-items:center;
+	  justify-content:space-between;
+	  gap:10px;
+	  user-select:none;
+	}
+	summary::-webkit-details-marker{ display:none; }
+
+	.sumMeta{
+	  color:var(--muted);
+	  font-weight:600;
+	  font-size:12px;
+	}
+
+	.detailsBody{ padding: 0 12px 12px; }
+
+	
+    .section h3{
+      margin:0 0 8px; font-size:13px; color:inherit; letter-spacing:.25px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    table{
+      width:100%;
+      border-collapse: collapse;
+      font-size:12px;
+      overflow:hidden;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.55);
+    }
+    html[data-theme="dark"] table{ background:rgba(17,26,46,.35); }
+    th, td{
+      padding:10px 10px;
+      border-bottom:1px solid var(--border);
+      text-align:left;
+      vertical-align:top;
+    }
+    th{
+      color:inherit;
+      font-weight:700;
+      font-size:11px;
+      background:var(--thead);
+    }
+    tr:last-child td{border-bottom:none}
+    .mono{font-family:var(--mono)}
+    .muted{color:var(--muted)}
+    .small{font-size:11px}
+    .spinner{
+      width:16px; height:16px; border-radius:50%;
+      border:2px solid rgba(120,140,170,.25);
+      border-top-color: var(--accent);
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {to{transform:rotate(360deg)}}
+
+    dialog{
+      width:min(620px, 96vw);
+      border:none;
+      border-radius: 18px;
+      padding:0;
+      background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.80));
+      color:var(--text);
+      box-shadow: var(--shadow);
+    }
+    html[data-theme="dark"] dialog{
+      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      color:var(--text);
+    }
+    dialog::backdrop{background:rgba(0,0,0,.55)}
+    .dlg{
+      padding:14px;
+      border:1px solid var(--border);
+      border-radius:18px;
+    }
+    .dlg h2{margin:6px 6px 10px; font-size:16px}
+    .dlg .controls{display:flex; gap:10px; padding:6px}
+    input[type="search"]{
+      flex:1;
+      background:rgba(255,255,255,.70);
+      color:var(--text);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px 12px;
+      outline:none;
+    }
+    html[data-theme="dark"] input[type="search"]{
+      background:rgba(11,18,32,.65);
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .results{
+      margin-top:10px;
+      border-top:1px solid var(--border);
+      max-height: 55vh;
+      overflow:auto;
+    }
+    .res{
+      padding:12px 10px;
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    }
+    .res:last-child{border-bottom:none}
+    .res .name{font-weight:700; font-size:13px}
+    .res .desc{color:var(--muted); font-size:11px; margin-top:2px}
+    .toast{
+      position:fixed;
+      left:50%; transform:translateX(-50%);
+      bottom:18px;
+      background:rgba(255,255,255,.90);
+      border:1px solid var(--border);
+      padding:10px 12px;
+      border-radius:14px;
+      box-shadow: var(--shadow);
+      color:var(--text);
+      font-size:12px;
+      max-width: 92vw;
+      display:none;
+      z-index:10;
+    }
+    html[data-theme="dark"] .toast{
+      background:rgba(17,26,46,.92);
+      border:1px solid rgba(255,255,255,.10);
+      color:var(--text);
+    }
+    .hint{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.35;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>Sää</h1>
+        <div class="sub">Open-Meteo • Päivän sää, 10 vrk ja 48 h tuntiennuste</div>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+        <button class="btn" id="btnTheme" title="Vaihda teema">☀️ Light</button>
+        <button class="btn primary" id="btnAdd">＋ Lisää sijainti</button>
+        <button class="btn" id="btnRefresh"><span id="refreshIcon">⟳</span> Päivitä</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="status" class="muted small" style="display:flex; align-items:center; gap:10px; padding:10px 2px;"></div>
+  <div class="grid" id="cards"></div>
+  <div class="hint">
+    Vinkki: iPhonessa/Androidissa voit lisätä tämän sivun kotinäytölle (”Add to Home Screen”) ja käyttää sitä kuin sovellusta.
+  </div>
+</main>
+
+<dialog id="dlg">
+  <div class="dlg">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+      <h2>Lisää sijainti</h2>
+      <button class="btn" id="btnClose">Sulje</button>
+    </div>
+    <div class="controls">
+      <input id="q" type="search" placeholder="Hae paikkaa… (esim. Mäntsälä, Hyökännummi, Levi)" autocomplete="off" />
+      <button class="btn primary" id="btnSearch">Hae</button>
+    </div>
+    <div class="results" id="results"></div>
+    <div class="hint">Haku käyttää Open-Meteon geokoodausta. Valitse tulos lisätäksesi sijainnin suosikkeihin.</div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/**
+ * Open-Meteo endpoints:
+ * - Geocoding: https://geocoding-api.open-meteo.com/v1/search?name=...&count=10&language=fi&format=json
+ * - Forecast:  https://api.open-meteo.com/v1/forecast?latitude=...&longitude=...&current=...&daily=...&hourly=...&timezone=auto
+ */
+
+const DEFAULT_LOCATIONS = [
+  { id: "hyokannummi", name: "Hyökännummi, Mäntsälä", latitude: 60.63, longitude: 25.32, timezone: "auto" },
+  { id: "levi",        name: "Levi, Kittilä",         latitude: 67.805, longitude: 24.808, timezone: "auto" }
+];
+
+const STORAGE_KEY = "saa_locations_v1";
+const THEME_KEY   = "saa_theme_v1";
+
+const el = (id) => document.getElementById(id);
+const cardsEl = el("cards");
+const statusEl = el("status");
+const dlg = el("dlg");
+const toastEl = el("toast");
+
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.style.display = "block";
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(()=> toastEl.style.display="none", 2400);
+}
+
+/* =========================
+   THEME TOGGLE
+   ========================= */
+function getSavedTheme(){
+  const t = localStorage.getItem(THEME_KEY);
+  if(t === "dark" || t === "light") return t;
+  return "light"; // perheystävällinen oletus
+}
+function applyTheme(theme){
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem(THEME_KEY, theme);
+  const btn = el("btnTheme");
+  if(theme === "dark"){
+    btn.textContent = "🌙 Dark";
+    btn.title = "Vaihda vaaleaan teemaan";
+  }else{
+    btn.textContent = "☀️ Light";
+    btn.title = "Vaihda tummaan teemaan";
+  }
+}
+function toggleTheme(){
+  const cur = document.documentElement.dataset.theme || "light";
+  applyTheme(cur === "dark" ? "light" : "dark");
+}
+
+/* =========================
+   LOCATIONS (storage)
+   ========================= */
+function loadLocations(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return [...DEFAULT_LOCATIONS];
+    const arr = JSON.parse(raw);
+    if(!Array.isArray(arr) || arr.length === 0) return [...DEFAULT_LOCATIONS];
+    return arr;
+  }catch{
+    return [...DEFAULT_LOCATIONS];
+  }
+}
+function saveLocations(locs){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(locs));
+}
+
+function formatTemp(v){
+  if(v === null || v === undefined || Number.isNaN(v)) return "–";
+  return `${Math.round(v)}°`;
+}
+function formatMm(v){
+  if(v === null || v === undefined || Number.isNaN(v)) return "–";
+  return `${(Math.round(v*10)/10).toFixed(1)} mm`;
+}
+function formatWind(v){
+  if(v === null || v === undefined || Number.isNaN(v)) return "–";
+  return `${Math.round(v)} m/s`;
+}
+
+/* =========================
+   DATE/TIME FORMATTING (no year)
+   ========================= */
+function fmtDateShort(isoDate){
+  // isoDate like "2026-02-12"
+  const [y,m,d] = (isoDate || "").split("-").map(Number);
+  if(!y || !m || !d) return isoDate || "";
+  return `${d}.${m}.`;
+}
+function fmtDateTimeShort(isoDateTime){
+  // isoDateTime like "2026-02-12T15:00"
+  const d = new Date(isoDateTime);
+  if(Number.isNaN(d.getTime())) return isoDateTime || "";
+  const day = d.getDate();
+  const mon = d.getMonth() + 1;
+  const hh = String(d.getHours()).padStart(2,"0");
+  const mi = String(d.getMinutes()).padStart(2,"0");
+  return `${day}.${mon}. ${hh}:${mi}`;
+}
+
+/* =========================
+   PRECIP + WEATHER ICONS
+   ========================= */
+function precipPhase(rainMm, snowMm){
+  const r = rainMm ?? 0;
+  const s = snowMm ?? 0;
+  if(r <= 0 && s <= 0) return { label:"Ei sadetta", tone:"muted" };
+  if(s > 0 && r > 0) return { label:"Räntää / seka", tone:"warn" };
+  if(s > 0) return { label:"Lunta", tone:"ok" };
+  return { label:"Vettä", tone:"accent" };
+}
+
+function codeToLabel(code){
+  const m = {
+    0:"Selkeää", 1:"Enimmäkseen selkeää", 2:"Puolipilvistä", 3:"Pilvistä",
+    45:"Sumua", 48:"Jääsumua",
+    51:"Tihkua", 53:"Tihkua", 55:"Tihkua",
+    56:"Jäätävää tihkua", 57:"Jäätävää tihkua",
+    61:"Sadetta", 63:"Sadetta", 65:"Kovaa sadetta",
+    66:"Jäätävää sadetta", 67:"Jäätävää sadetta",
+    71:"Lumipyryä", 73:"Lumipyryä", 75:"Kovaa lumisadetta",
+    77:"Lumijyväsiä",
+    80:"Sadekuuroja", 81:"Sadekuuroja", 82:"Voimakkaita kuuroja",
+    85:"Lumikuuroja", 86:"Voimakkaita lumikuuroja",
+    95:"Ukkosta", 96:"Ukkosta / rakeita", 99:"Voim. ukkosta / rakeita"
+  };
+  return m[code] ?? `Koodi ${code}`;
+}
+
+// Kevyet ikonit (emoji) Open-Meteo weathercodeille
+function codeToIcon(code){
+  if(code === 0) return "☀️";
+  if(code === 1) return "🌤️";
+  if(code === 2) return "⛅";
+  if(code === 3) return "☁️";
+  if(code === 45 || code === 48) return "🌫️";
+  if(code >= 51 && code <= 57) return "🌦️";        // tihku / jäätävä tihku
+  if(code >= 61 && code <= 67) return "🌧️";        // sade / jäätävä sade
+  if(code === 77) return "❄️";
+  if(code >= 71 && code <= 75) return "🌨️";        // lumisade
+  if(code >= 80 && code <= 82) return "🌧️";        // kuurot
+  if(code === 85 || code === 86) return "🌨️";      // lumikuurot
+  if(code === 95) return "⛈️";
+  if(code === 96 || code === 99) return "⛈️";
+  return "🌡️";
+}
+
+/* =========================
+   API
+   ========================= */
+async function fetchForecast(loc){
+  const params = new URLSearchParams({
+    latitude: loc.latitude,
+    longitude: loc.longitude,
+    timezone: "auto",
+    current: [
+      "temperature_2m",
+      "apparent_temperature",
+      "precipitation",
+      "weather_code",
+      "wind_speed_10m"
+    ].join(","),
+    daily: [
+      "weather_code",
+      "temperature_2m_max",
+      "temperature_2m_min",
+      "precipitation_sum",
+      "rain_sum",
+      "snowfall_sum",
+      "wind_speed_10m_max"
+    ].join(","),
+    forecast_days: "10",
+    hourly: [
+      "temperature_2m",
+      "apparent_temperature",
+      "precipitation",
+      "rain",
+      "snowfall",
+      "weather_code",
+      "wind_speed_10m"
+    ].join(",")
+  });
+
+  const url = `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if(!res.ok) throw new Error(`Forecast failed (${res.status})`);
+  return await res.json();
+}
+
+/* =========================
+   RENDER
+   ========================= */
+function renderCard(loc, data){
+  const nowT = data?.current?.temperature_2m;
+  const nowFeels = data?.current?.apparent_temperature;
+  const nowWind = data?.current?.wind_speed_10m;
+  const nowPrec = data?.current?.precipitation;
+  const nowCode = data?.current?.weather_code;
+  const nowLabel = codeToLabel(nowCode);
+  const nowIcon = codeToIcon(nowCode);
+
+  const d = data?.daily;
+  const todayMax = d?.temperature_2m_max?.[0];
+  const todayMin = d?.temperature_2m_min?.[0];
+  const todayRain = d?.rain_sum?.[0] ?? 0;
+  const todaySnow = d?.snowfall_sum?.[0] ?? 0;
+  const todayPrecSum = d?.precipitation_sum?.[0];
+  const phase = precipPhase(todayRain, todaySnow);
+
+  // 10 päivän taulukko
+  const rows10 = [];
+  for(let i=0;i<10;i++){
+    const date = d?.time?.[i];
+    if(!date) continue;
+    const code = d?.weather_code?.[i];
+    const icon = codeToIcon(code);
+    const maxT = d?.temperature_2m_max?.[i];
+    const minT = d?.temperature_2m_min?.[i];
+    const p = d?.precipitation_sum?.[i];
+    const r = d?.rain_sum?.[i] ?? 0;
+    const s = d?.snowfall_sum?.[i] ?? 0;
+    const ph = precipPhase(r, s).label;
+
+    rows10.push(`
+      <tr>
+        <td class="mono">${fmtDateShort(date)}</td>
+        <td>${icon} ${codeToLabel(code)}</td>
+        <td>${formatTemp(maxT)} / ${formatTemp(minT)}</td>
+        <td>${formatMm(p)}<div class="muted small">${ph}</div></td>
+      </tr>
+    `);
+  }
+
+  // 48 h tuntitaulukko (lähtien nykyhetkestä)
+  const ht = data?.hourly?.time ?? [];
+  const hTemp = data?.hourly?.temperature_2m ?? [];
+  const hFeels = data?.hourly?.apparent_temperature ?? [];
+  const hPrec = data?.hourly?.precipitation ?? [];
+  const hRain = data?.hourly?.rain ?? [];
+  const hSnow = data?.hourly?.snowfall ?? [];
+  const hWind = data?.hourly?.wind_speed_10m ?? [];
+  const hCode = data?.hourly?.weather_code ?? [];
+
+  let startIdx = 0;
+	const now = new Date();
+	now.setMinutes(0, 0, 0); // pyöristys kuluvan tunnin alkuun
+
+	for (let i = 0; i < ht.length; i++) {
+	  const t = new Date(ht[i]); // "YYYY-MM-DDTHH:MM" tulkitaan paikallisajaksi
+	  if (!Number.isNaN(t.getTime()) && t >= now) {
+		startIdx = i;
+		break;
+	  }
+	}
+  const endIdx = Math.min(startIdx + 48, ht.length);
+
+  const rows48 = [];
+  for(let i=startIdx;i<endIdx;i++){
+    const timeIso = ht[i];
+    const rain = hRain[i] ?? 0;
+    const snow = hSnow[i] ?? 0;
+    const ph = precipPhase(rain, snow).label;
+    const icon = codeToIcon(hCode[i]);
+
+    rows48.push(`
+      <tr>
+        <td class="mono">${fmtDateTimeShort(timeIso)}</td>
+        <td>${formatTemp(hTemp[i])}<div class="muted small">tuntuu ${formatTemp(hFeels[i])}</div></td>
+        <td>${formatMm(hPrec[i])}<div class="muted small">${ph}</div></td>
+        <td>${formatWind(hWind[i])}<div class="muted small">${icon} ${codeToLabel(hCode[i])}</div></td>
+      </tr>
+    `);
+  }
+
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `
+    <div class="head">
+      <div>
+        <div class="titleRow">
+          <div class="wicon" aria-hidden="true">${nowIcon}</div>
+          <div>
+            <div class="title">${loc.name}</div>
+            <div class="meta mono">${data.timezone ?? ""} • ${fmtDateTimeShort(data.current?.time ?? "")}</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn danger" data-remove="${loc.id}" title="Poista sijainti">Poista</button>
+    </div>
+
+    <div class="row">
+      <div class="pill">
+        <div class="k">Nyt</div>
+        <div class="v">${formatTemp(nowT)}</div>
+        <div class="s">tuntuu ${formatTemp(nowFeels)} • ${nowLabel}</div>
+      </div>
+
+      <div class="pill">
+        <div class="k">Päivän ylin / alin</div>
+        <div class="v">${formatTemp(todayMax)} / ${formatTemp(todayMin)}</div>
+        <div class="s">Tuuli nyt ${formatWind(nowWind)}</div>
+      </div>
+
+      <div class="pill">
+        <div class="k">Sade (päivä)</div>
+        <div class="v">${formatMm(todayPrecSum)}</div>
+        <div class="s">${phase.label} • nyt ${formatMm(nowPrec)}</div>
+      </div>
+    </div>
+
+	<div class="section">
+	  <details>
+		<summary>
+		  <span>48 h tuntiennuste</span>
+		  <span class="sumMeta">avaa / sulje</span>
+		</summary>
+		<div class="detailsBody">
+		  <table aria-label="48 tunnin ennuste">
+			<thead>
+			  <tr>
+				<th>Aika</th>
+				<th>Lämpö</th>
+				<th>Sade</th>
+				<th>Tuuli / sää</th>
+			  </tr>
+			</thead>
+			<tbody>
+			  ${rows48.join("")}
+			</tbody>
+		  </table>
+		</div>
+	  </details>
+	</div>
+
+    <div class="section">
+      <h3>10 päivän ennuste <span class="muted small">(max/min, sademäärä, olomuoto)</span></h3>
+      <table aria-label="10 päivän ennuste">
+        <thead>
+          <tr>
+            <th>Päivä</th>
+            <th>Sää</th>
+            <th>Max/Min</th>
+            <th>Sade</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows10.join("")}
+        </tbody>
+      </table>
+    </div>  
+  `;
+
+  card.querySelector('[data-remove]')?.addEventListener("click", () => {
+    removeLocation(loc.id);
+  });
+
+  return card;
+}
+
+function setStatusLoading(msg){
+  statusEl.innerHTML = `<span class="spinner"></span> <span>${msg}</span>`;
+}
+function setStatus(msg){
+  statusEl.textContent = msg;
+}
+
+let locations = loadLocations();
+
+async function refresh(){
+  cardsEl.innerHTML = "";
+  setStatusLoading("Haetaan säätietoja…");
+  const started = Date.now();
+
+  for(const loc of locations){
+    try{
+      const data = await fetchForecast(loc);
+      cardsEl.appendChild(renderCard(loc, data));
+    }catch(err){
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <div class="head">
+          <div>
+            <div class="title">${loc.name}</div>
+            <div class="meta">Virhe haussa</div>
+          </div>
+          <button class="btn danger" data-remove="${loc.id}">Poista</button>
+        </div>
+        <div style="padding:0 16px 16px" class="muted small">
+          ${(err && err.message) ? err.message : "Tuntematon virhe"}
+        </div>
+      `;
+      card.querySelector('[data-remove]')?.addEventListener("click", () => removeLocation(loc.id));
+      cardsEl.appendChild(card);
+    }
+  }
+
+  const ms = Date.now() - started;
+  setStatus(`Päivitetty • ${new Date().toLocaleString("fi-FI")} • ${Math.round(ms/1000)} s`);
+}
+
+function removeLocation(id){
+  locations = locations.filter(l => l.id !== id);
+  if(locations.length === 0){
+    locations = [...DEFAULT_LOCATIONS];
+    toast("Kaikki poistettu – palautettiin oletussijainnit.");
+  }else{
+    toast("Sijainti poistettu.");
+  }
+  saveLocations(locations);
+  refresh();
+}
+
+/* =========================
+   DIALOG (add location)
+   ========================= */
+function openDialog(){
+  el("results").innerHTML = "";
+  el("q").value = "";
+  dlg.showModal();
+  setTimeout(()=> el("q").focus(), 50);
+}
+function closeDialog(){ dlg.close(); }
+
+function uniqId(prefix="loc"){
+  return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+}
+
+async function searchPlaces(name){
+  const params = new URLSearchParams({
+    name,
+    count: "12",
+    language: "fi",
+    format: "json"
+  });
+  const url = `https://geocoding-api.open-meteo.com/v1/search?${params.toString()}`;
+  const res = await fetch(url, { cache:"no-store" });
+  if(!res.ok) throw new Error(`Geocoding failed (${res.status})`);
+  return await res.json();
+}
+
+function renderResults(items){
+  const r = el("results");
+  r.innerHTML = "";
+  if(!items || items.length === 0){
+    r.innerHTML = `<div class="res"><div><div class="name">Ei tuloksia</div><div class="desc">Kokeile toista hakua.</div></div></div>`;
+    return;
+  }
+  for(const it of items){
+    const name = [it.name, it.admin1, it.country].filter(Boolean).join(", ");
+    const desc = `lat ${it.latitude.toFixed(4)}, lon ${it.longitude.toFixed(4)} • ${it.timezone || ""}`;
+    const row = document.createElement("div");
+    row.className = "res";
+    row.innerHTML = `
+      <div>
+        <div class="name">${name}</div>
+        <div class="desc mono">${desc}</div>
+      </div>
+      <button class="btn primary">Lisää</button>
+    `;
+    row.querySelector("button").addEventListener("click", () => {
+      const exists = locations.some(l =>
+        Math.abs(l.latitude - it.latitude) < 1e-6 &&
+        Math.abs(l.longitude - it.longitude) < 1e-6
+      );
+      if(exists){
+        toast("Sijainti on jo listalla.");
+        return;
+      }
+      const loc = {
+        id: uniqId("loc"),
+        name,
+        latitude: it.latitude,
+        longitude: it.longitude,
+        timezone: it.timezone || "auto"
+      };
+      locations = [loc, ...locations];
+      saveLocations(locations);
+      toast("Sijainti lisätty.");
+      closeDialog();
+      refresh();
+    });
+    r.appendChild(row);
+  }
+}
+
+async function doSearch(){
+  const q = el("q").value.trim();
+  if(q.length < 2){ toast("Kirjoita vähintään 2 merkkiä."); return; }
+  el("results").innerHTML = `<div class="res"><div><div class="name">Haetaan…</div><div class="desc">Odota hetki.</div></div></div>`;
+  try{
+    const data = await searchPlaces(q);
+    renderResults(data.results || []);
+  }catch(err){
+    el("results").innerHTML = `<div class="res"><div><div class="name">Virhe</div><div class="desc">${(err && err.message) ? err.message : "Tuntematon virhe"}</div></div></div>`;
+  }
+}
+
+/* =========================
+   HOOKS + INIT
+   ========================= */
+el("btnAdd").addEventListener("click", openDialog);
+el("btnClose").addEventListener("click", closeDialog);
+el("btnSearch").addEventListener("click", doSearch);
+el("q").addEventListener("keydown", (e)=>{ if(e.key==="Enter") doSearch(); });
+el("btnRefresh").addEventListener("click", refresh);
+el("btnTheme").addEventListener("click", toggleTheme);
+
+// Init theme + first load
+applyTheme(getSavedTheme());
+refresh();
+</script>
+</body>
+</html>
