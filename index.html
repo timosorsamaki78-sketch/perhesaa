@@ -420,17 +420,23 @@ function fmtDateShort(isoDate){
   // isoDate like "2026-02-12"
   const [y,m,d] = (isoDate || "").split("-").map(Number);
   if(!y || !m || !d) return isoDate || "";
-  return `${d}.${m}.`;
+  const dt = new Date(y, m - 1, d); // varma paikallinen päivä
+  return `${weekdayFiShort(dt)} ${d}.${m}.`;
 }
+function weekdayFiShort(dateObj){
+  // 0=su ... 6=la
+  const w = ["su", "ma", "ti", "ke", "to", "pe", "la"];
+  return w[dateObj.getDay()] || "";
+}	
 function fmtDateTimeShort(isoDateTime){
   // isoDateTime like "2026-02-12T15:00"
-  const d = new Date(isoDateTime);
-  if(Number.isNaN(d.getTime())) return isoDateTime || "";
-  const day = d.getDate();
-  const mon = d.getMonth() + 1;
-  const hh = String(d.getHours()).padStart(2,"0");
-  const mi = String(d.getMinutes()).padStart(2,"0");
-  return `${day}.${mon}. ${hh}:${mi}`;
+  const dt = new Date(isoDateTime);
+  if(Number.isNaN(dt.getTime())) return isoDateTime || "";
+  const day = dt.getDate();
+  const mon = dt.getMonth() + 1;
+  const hh = String(dt.getHours()).padStart(2,"0");
+  const mi = String(dt.getMinutes()).padStart(2,"0");
+  return `${weekdayFiShort(dt)} ${day}.${mon}. ${hh}:${mi}`;
 }
 
 /* =========================
@@ -880,5 +886,6 @@ refresh();
 </script>
 </body>
 </html>
+
 
 
