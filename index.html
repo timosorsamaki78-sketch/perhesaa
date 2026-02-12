@@ -525,7 +525,7 @@ async function fetchForecast(loc){
 /* =========================
    RENDER
    ========================= */
-function renderCard(loc, data){
+function renderCard(loc, data, index){
   const nowT = data?.current?.temperature_2m;
   const nowFeels = data?.current?.apparent_temperature;
   const nowWind = data?.current?.wind_speed_10m;
@@ -721,9 +721,10 @@ async function refresh(){
 
   for(let i = 0; i < locations.length; i++){
     const loc = locations[i];
-    const data = await fetchForecast(loc);
-    cardsEl.appendChild(renderCard(loc, data, i));
-  }catch(err){
+    try{
+      const data = await fetchForecast(loc);
+      cardsEl.appendChild(renderCard(loc, data, i));
+    }catch(err){
       const card = document.createElement("div");
       card.className = "card";
       card.innerHTML = `
@@ -879,4 +880,5 @@ refresh();
 </script>
 </body>
 </html>
+
 
