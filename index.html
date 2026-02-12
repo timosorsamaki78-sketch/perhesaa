@@ -397,7 +397,12 @@ function loadLocations(){
   }
 }
 function saveLocations(locs){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(locs));
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(locs));
+  }catch(e){
+    console.error("Tallennus epäonnistui:", e);
+    toast("Tallennus ei onnistu tällä selaimella (esim. yksityinen selaus). Sijainnit eivät säily.");
+  }
 }
 
 function formatTemp(v){
@@ -886,6 +891,7 @@ refresh();
 </script>
 </body>
 </html>
+
 
 
 
